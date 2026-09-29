@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta http-equiv="refresh" content="60"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>ORB v3 PAPER · NDX-100 Dashboard</title>
+<style>
+:root {
+  --bg:#0b1220; --card:#152238; --border:#243552; --text:#e8eefc; --muted:#9fb0d0;
+  --ok:#7dffa6; --bad:#ff8f8f; --warn:#ffd27d; --accent:#8ec7ff;
+}
+body{font-family:ui-sans-serif,system-ui,sans-serif;margin:0;background:var(--bg);color:var(--text);line-height:1.35}
+.wrap{max-width:1200px;margin:0 auto;padding:16px 20px 40px}
+h1{font-size:1.45rem;margin:0 0 4px}
+h2{font-size:1.1rem;margin:26px 0 10px;border-bottom:1px solid var(--border);padding-bottom:6px}
+h3{font-size:.95rem;margin:16px 0 8px;color:var(--muted)}
+.sub{color:var(--muted);margin:0 0 16px;font-size:.9rem}
+.cards{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;min-width:130px;flex:1 1 130px}
+.card .l{color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.03em}
+.card .v{font-size:1.2rem;font-weight:600;margin-top:4px}
+.card .v.ok,.ok{color:var(--ok)}
+.card .v.bad,.bad{color:var(--bad)}
+.card .v.warn,.warn{color:var(--warn)}
+table{width:100%;border-collapse:collapse;background:var(--card);border-radius:12px;overflow:hidden;font-size:.9rem;margin-bottom:8px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}
+th{color:var(--muted);font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.02em}
+td.note{color:var(--muted);font-size:.82rem;max-width:280px}
+td.ok{color:var(--ok)} td.bad{color:var(--bad)}
+.muted{color:var(--muted);text-align:center}
+.err{color:var(--bad);margin:12px 0}
+.warn-banner{background:#2a2210;border:1px solid #5a4a20;color:var(--warn);border-radius:10px;padding:10px 12px;margin:0 0 12px;font-size:.9rem}
+a{color:var(--accent)}
+.tag{display:inline-block;background:#1e2f4a;color:var(--muted);font-size:.7rem;padding:1px 6px;border-radius:6px;margin-left:4px}
+.date-block{margin:14px 0 18px}
+.date-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:0 0 8px;flex-wrap:wrap}
+.date-label{font-weight:600;font-size:1rem}
+.date-pl{font-size:.9rem;color:var(--muted)}
+.date-pl.ok{color:var(--ok)} .date-pl.bad{color:var(--bad)}
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0 8px}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+.chart-title{font-size:.85rem;color:var(--muted);margin-bottom:6px;font-weight:600}
+.chart-lbl{fill:var(--muted);font-size:10px}
+.chart-empty{padding:24px;text-align:center}
+.badge{display:inline-block;border-radius:999px;padding:3px 12px;font-size:.78rem;margin-left:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.badge-live{background:#5a1218;color:#ffb4b4;border:2px solid #e05060;box-shadow:0 0 12px rgba(224,80,96,.35)}
+.badge-paper{background:#1a3a28;color:var(--ok);border:1px solid #2a5a40}
+.badge-paper-ndx{background:#123528;color:#9dffc0;border:2px solid #3a8a5a;box-shadow:0 0 12px rgba(58,138,90,.3)}
+.live-banner{background:#3a1518;border:1px solid #8a3038;color:#ffc9c9;border-radius:10px;padding:10px 12px;margin:0 0 14px;font-size:.92rem;font-weight:600}
+.paper-banner{background:#12301f;border:1px solid #2a5a40;color:#b8ffd0;border-radius:10px;padding:10px 12px;margin:0 0 14px;font-size:.92rem;font-weight:600}
+@media (max-width:800px){
+  .charts{grid-template-columns:1fr}
+  .wrap{padding:12px}
+  table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  td.note{max-width:200px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>ORB v3 — PAPER · NDX-100 Dashboard <span class="badge badge-paper-ndx">PAPER · NDX-100</span></h1>
+<p class="sub">Alpaca paper · All times PT · Auto-refresh 60s · Last build: Tue Sep 29, 2026 12:45 PM PT · Closed lots since: 2026-09-29 00:00 PDT · Layout inspired by <a href="https://niratrades.streamlit.app/">niratrades</a></p>
+<p class="sub" style="margin-top:-8px"><a href="strategy.html"><strong>How this strategy works →</strong></a> · Explainer covers <strong>PAPER NDX-100</strong> vs <strong>LIVE NDX-14</strong></p>
+<p class='paper-banner'>PAPER Alpaca · Nasdaq-100 universe — closed lots since paper NDX-100 go-live (2026-09-29 00:00 PDT). Do not mix with LIVE NDX-14 fills. LIVE dashboard: <a href='https://yoraja.github.io/orb-v3-paper-dashboard/'>https://yoraja.github.io/orb-v3-paper-dashboard/</a></p>
+<p class='ok'>Connected to Alpaca paper</p>
+
+<div class="cards">
+  <div class="card"><div class="l">Portfolio Equity</div><div class="v">50,000.00</div></div>
+  <div class="card"><div class="l">Cash Available</div><div class="v">50,000.00</div></div>
+  <div class="card"><div class="l">Buying Power</div><div class="v">200,000.00</div></div>
+  <div class="card"><div class="l">Day Booked P/L</div><div class="v warn">None yet</div></div>
+  <div class="card"><div class="l">Unrealized P/L</div><div class="v warn">+0.00</div></div>
+  <div class="card"><div class="l">Open Positions</div><div class="v">0</div></div>
+</div>
+<div class="cards">
+  <div class="card"><div class="l">Account</div><div class="v">ACTIVE</div></div>
+  <div class="card"><div class="l">Day Realized R</div><div class="v">+0.00 R</div></div>
+  <div class="card"><div class="l">Win Rate (closed)</div><div class="v">—</div></div>
+  <div class="card"><div class="l">Closed Trades</div><div class="v">0</div></div>
+  <div class="card"><div class="l">Total Realized $</div><div class="v warn">$+0.00</div></div>
+  <div class="card"><div class="l">Open Orders</div><div class="v">0</div></div>
+</div>
+
+<h2>Performance charts</h2>
+<div class="charts">
+<div class="chart-empty muted">Booked P/L by day (PT) — no data yet</div>
+<div class="chart-empty muted">Cumulative booked P/L — no data yet</div>
+</div>
+
+<h2>Open Positions</h2>
+<table>
+<thead><tr><th>Symbol</th><th>Qty</th><th>Avg entry</th><th>Last</th><th>Mkt value</th><th>Unrealized P/L</th><th>Side</th></tr></thead>
+<tbody><tr><td colspan="7" class="muted">No open positions</td></tr></tbody>
+</table>
+
+<h2>Open Orders</h2>
+
+<table>
+<thead><tr>
+<th>Symbol</th><th>Side</th><th>Qty</th><th>Filled</th><th>Type</th>
+<th>Status</th><th>Limit</th><th>Order id</th><th>Submitted</th>
+</tr></thead>
+<tbody><tr><td colspan="9" class="muted">No open orders</td></tr></tbody>
+</table>
+
+
+<h2>Closed Positions</h2>
+
+<div class="cards">
+  <div class="card"><div class="l">Day booked P/L ($)</div><div class="v warn">None yet</div>
+  <div class="sub" style="margin:4px 0 0">No closed lots today</div></div>
+  <div class="card"><div class="l">Closed trades (grouped)</div><div class="v">0</div>
+  <div class="sub" style="margin:4px 0 0">0 FIFO lots · 0 fills</div></div>
+  <div class="card"><div class="l">Total realized P/L</div><div class="v warn">$+0.00</div></div>
+  <div class="card"><div class="l">Win rate</div><div class="v">—</div></div>
+  <div class="card"><div class="l">Avg win / loss</div><div class="v" style="font-size:.95rem">— / —</div></div>
+  <div class="card"><div class="l">Best / worst</div><div class="v" style="font-size:.9rem">— · —</div></div>
+</div>
+
+<p class="sub">No fills in lookback — no booked P/L yet. Closed-since filter: 2026-09-29 00:00 PDT (PAPER NDX-100 lots only; pre-go-live / LIVE fills excluded).</p>
+<p class="sub">Lots grouped by PT calendar date + symbol (partial fills rolled into one row per ticker/day). Inspired by niratrades.streamlit.app closed-position rollup.</p>
+<p class="sub">% fund utilized = entry notional ÷ portfolio equity at last refresh.</p>
+<p class="muted">No closed positions in lookback window.</p>
+
+<h2>Session (Nasdaq-100 PAPER universe)</h2>
+
+<div class="cards">
+  <div class="card"><div class="l">Session date</div><div class="v">2026-09-25</div></div>
+  <div class="card"><div class="l">Universe / max concurrent</div><div class="v">14 / 4</div></div>
+  <div class="card"><div class="l">Day realized R</div><div class="v">+0.00 R</div></div>
+  <div class="card"><div class="l">Daily halt</div><div class="v ok">No</div></div>
+  <div class="card"><div class="l">State updated</div><div class="v" style="font-size:.95rem">Fri Sep 25, 11:56 AM PT</div></div>
+</div>
+
+<table>
+<thead><tr>
+<th>Symbol</th><th>Status</th><th>Traded</th><th>Side</th>
+<th>OR high</th><th>OR low</th><th>OR mid (stop)</th><th>Note</th>
+</tr></thead>
+<tbody><tr><td><strong>NVDA</strong></td><td>watching</td><td>No</td><td>—</td><td>226.94</td><td>223.21</td><td>225.08</td><td class='note'>watch · no valid breakout on latest bars; no resting stop-entry placed</td></tr><tr><td><strong>TSLA</strong></td><td>skip invalid or</td><td>No</td><td>—</td><td>386.83</td><td>369.65</td><td>378.24</td><td class='note'>skip invalid OR (range_too_large)</td></tr><tr><td><strong>INTC</strong></td><td>skip invalid or</td><td>No</td><td>—</td><td>126.93</td><td>123.60</td><td>125.27</td><td class='note'>skip invalid OR (range_too_large)</td></tr><tr><td><strong>PLTR</strong></td><td>watching</td><td>No</td><td>—</td><td>194.21</td><td>190.61</td><td>192.41</td><td class='note'>watch · no valid breakout on latest bars; no resting stop-entry placed</td></tr><tr><td><strong>AMD</strong></td><td>watching</td><td>No</td><td>—</td><td>638.95</td><td>629.62</td><td>634.28</td><td class='note'>watch · no valid breakout on latest bars; no resting stop-entry placed</td></tr><tr><td><strong>AAPL</strong></td><td>entered</td><td>Yes</td><td>long</td><td>336.80</td><td>334.53</td><td>335.67</td><td class='note'>submitted bracket ec2166b0-24fa-4cef-b34d-1c3959c5a4b8</td></tr><tr><td><strong>AMZN</strong></td><td>watching</td><td>No</td><td>—</td><td>250.16</td><td>247.18</td><td>248.67</td><td class='note'>watch · no valid breakout on latest bars; no resting stop-entry placed</td></tr><tr><td><strong>GOOGL</strong></td><td>watching</td><td>No</td><td>—</td><td>347.03</td><td>341.11</td><td>344.07</td><td class='note'>watch · no valid breakout on latest bars; no resting stop-entry placed</td></tr><tr><td><strong>MU</strong></td><td>skip invalid or</td><td>No</td><td>—</td><td>1,108.72</td><td>1,074.51</td><td>1,091.62</td><td class='note'>skip invalid OR (range_too_large)</td></tr><tr><td><strong>MSFT</strong></td><td>skip invalid or</td><td>No</td><td>—</td><td>517.48</td><td>497.30</td><td>507.39</td><td class='note'>skip invalid OR (range_too_large)</td></tr><tr><td><strong>META</strong></td><td>skip invalid or</td><td>No</td><td>—</td><td>769.57</td><td>750.54</td><td>760.05</td><td class='note'>skip invalid OR (range_too_large)</td></tr><tr><td><strong>AVGO</strong></td><td>watching</td><td>No</td><td>—</td><td>354.43</td><td>349.43</td><td>351.93</td><td class='note'>watch · no valid breakout on latest bars; no resting stop-entry placed</td></tr><tr><td><strong>WMT</strong></td><td>watching</td><td>No</td><td>—</td><td>107.79</td><td>106.45</td><td>107.12</td><td class='note'>watch · no valid breakout on latest bars; no resting stop-entry placed</td></tr><tr><td><strong>CSCO</strong></td><td>watching</td><td>No</td><td>—</td><td>108.64</td><td>106.78</td><td>107.71</td><td class='note'>watch · no valid breakout on latest bars; no resting stop-entry placed</td></tr></tbody>
+</table>
+
+
+<p class="sub" style="margin-top:24px">Broker live view: <a href="https://app.alpaca.markets/paper/dashboard/overview">Alpaca paper</a>
+ · <a href="strategy.html">How this strategy works</a>
+ · Source layout: <a href="https://github.com/yoraja/nira_live_ai_trades">nira_live_ai_trades</a> / <a href="https://niratrades.streamlit.app/">niratrades.streamlit.app</a>
+ · This page: <a href="https://yoraja.github.io/orb-v3-paper-ndx100-dashboard/">https://yoraja.github.io/orb-v3-paper-ndx100-dashboard/</a>
+ · Other track: <a href="https://yoraja.github.io/orb-v3-paper-dashboard/">LIVE NDX-14</a></p>
+</div>
+</body></html>

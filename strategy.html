@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>ORB v3 — How this strategy works</title>
+<style>
+:root {
+  --bg:#0b1220; --card:#152238; --border:#243552; --text:#e8eefc; --muted:#9fb0d0;
+  --ok:#7dffa6; --bad:#ff8f8f; --warn:#ffd27d; --accent:#8ec7ff;
+}
+body{font-family:ui-sans-serif,system-ui,sans-serif;margin:0;background:var(--bg);color:var(--text);line-height:1.5}
+.wrap{max-width:860px;margin:0 auto;padding:16px 20px 48px}
+h1{font-size:1.45rem;margin:0 0 4px;line-height:1.3}
+h2{font-size:1.15rem;margin:28px 0 10px;border-bottom:1px solid var(--border);padding-bottom:6px}
+h3{font-size:1rem;margin:18px 0 8px;color:var(--accent)}
+.sub{color:var(--muted);margin:0 0 14px;font-size:.9rem}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 14px;padding-left:1.25rem}
+li{margin:0 0 6px}
+a{color:var(--accent)}
+.nav{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin:0 0 18px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:12px}
+.nav a{font-weight:600;text-decoration:none}
+.nav a:hover{text-decoration:underline}
+.badge{display:inline-block;border-radius:999px;padding:3px 12px;font-size:.78rem;margin-left:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.badge-live{background:#5a1218;color:#ffb4b4;border:2px solid #e05060;box-shadow:0 0 12px rgba(224,80,96,.35)}
+.live-banner{background:#3a1518;border:1px solid #8a3038;color:#ffc9c9;border-radius:10px;padding:10px 12px;margin:0 0 16px;font-size:.92rem;font-weight:600}
+.disclaimer{background:#1a2438;border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin:0 0 18px;font-size:.9rem;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin:0 0 14px}
+.cards{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.cards .card{min-width:140px;flex:1 1 140px;margin:0}
+.card .l{color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.03em}
+.card .v{font-size:1.05rem;font-weight:600;margin-top:4px}
+table{width:100%;border-collapse:collapse;background:var(--card);border-radius:12px;overflow:hidden;font-size:.9rem;margin:0 0 14px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}
+th{color:var(--muted);font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.02em}
+.ok{color:var(--ok)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+.example{background:#121c2e;border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin:0 0 14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.85rem;white-space:pre-wrap}
+.toc{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin:0 0 20px}
+.toc ol{margin:8px 0 0;padding-left:1.2rem}
+.toc a{text-decoration:none}
+.toc a:hover{text-decoration:underline}
+.footer{margin-top:28px;padding-top:14px;border-top:1px solid var(--border);color:var(--muted);font-size:.85rem}
+@media (max-width:800px){
+  .wrap{padding:12px 14px 40px}
+  table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  h1{font-size:1.25rem}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="nav">
+  <a href="https://yoraja.github.io/orb-v3-paper-dashboard/">LIVE NDX-14</a>
+  <span class="sub" style="margin:0">·</span>
+  <a href="https://yoraja.github.io/orb-v3-paper-ndx100-dashboard/">PAPER NDX-100</a>
+  <span class="sub" style="margin:0">·</span>
+  <a href="#what">What this is</a>
+  <a href="#universe">Universe</a>
+  <a href="#or">Opening range</a>
+  <a href="#entry">Entries</a>
+  <a href="#stop-target">Stop &amp; target</a>
+  <a href="#exits">Exits</a>
+  <a href="#ops">Ops</a>
+</div>
+
+<h1>ORB v3 — How this strategy works <span class="badge badge-live">LIVE · REAL MONEY</span></h1>
+<p class="sub">DAILY_ORB_v3 (LIVE NDX-14) + PAPER NDX-100 experiment · Document last updated: <strong>Tue Sep 29, 2026 12:45 PM PT</strong></p>
+
+<p class="live-banner">Dual track: <strong>LIVE</strong> trades Alpaca LIVE on NDX-14 (real money). <strong>PAPER</strong> runs a parallel Nasdaq-100 ORB experiment on Alpaca paper. Cash-only both. Flat by end of day — no overnight holds. Do not promote NDX-100 to LIVE until paper outperforms and you approve.</p>
+
+<div class="disclaimer">
+  <strong>Not financial advice.</strong> This page explains how Yogesh’s automated ORB v3 system is configured to run.
+  Backtests are historical simulations; live results will differ. Do not treat past averages as a promise of future returns.
+</div>
+
+<nav class="toc" aria-label="Contents">
+  <strong>On this page</strong>
+  <ol>
+    <li><a href="#what">What this is</a></li>
+    <li><a href="#universe">How stocks are identified</a></li>
+    <li><a href="#or">Opening range</a></li>
+    <li><a href="#entry">How trades are entered</a></li>
+    <li><a href="#stop-target">How stop and target are set</a></li>
+    <li><a href="#exits">How trades are exited</a></li>
+    <li><a href="#ops">Ops / monitoring</a></li>
+    <li><a href="#source">Source of truth</a></li>
+  </ol>
+</nav>
+
+<h2 id="what">What this is</h2>
+<p>
+  ORB v3 is an <strong>opening-range breakout</strong> day-trading system on liquid Nasdaq names.
+  After the first hour of the regular session, it waits for the first close beyond that hour’s high (long) or low (short),
+  then places a stop and a take-profit and exits the same day.
+</p>
+
+<div class="cards">
+  <div class="card"><div class="l">LIVE</div><div class="v">NDX-14 · DAILY_ORB_v3</div></div>
+  <div class="card"><div class="l">PAPER experiment</div><div class="v">NDX-100 · same ORB v3</div></div>
+  <div class="card"><div class="l">Rules</div><div class="v">3.1.0 / paper-ndx100</div></div>
+  <div class="card"><div class="l">Overnight</div><div class="v bad">Never</div></div>
+</div>
+
+<h3>Honesty on backtest performance</h3>
+<p>
+  From <code>rules_daily_v3.json</code> winner metrics (approx. Oct 2023 – Sep 2026, after assumed costs):
+</p>
+<table>
+<thead><tr><th>Metric</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>Average daily return</td><td>~<strong>0.15%</strong> (0.1548%) — <span class="warn">not 1% per day</span></td></tr>
+<tr><td>Win rate</td><td>~64%</td></tr>
+<tr><td>Max drawdown</td><td>~−2.8%</td></tr>
+<tr><td>Trades per day (avg)</td><td>~0.81</td></tr>
+<tr><td>Sessions with ≥ 1% day</td><td>~8%</td></tr>
+</tbody>
+</table>
+<p class="sub">
+  The aspirational “1% per day” target was <strong>not</strong> achieved (~6.5× short).
+  Many days are flat or small; a few full 2.5R wins pull the average up.
+</p>
+
+<h2 id="universe">How stocks are identified (universe)</h2>
+<p><strong>Dual track</strong> — LIVE stays on a curated liquid-14; PAPER scans the full Nasdaq-100 with the same ORB v3 mechanics.</p>
+<table>
+<thead><tr><th>Track</th><th>Universe</th><th>Rules file</th><th>State</th></tr></thead>
+<tbody>
+<tr><td><strong>LIVE</strong></td><td>NDX-14</td><td><code>rules_daily_v3.json</code></td><td><code>orb_v3_live_state.json</code></td></tr>
+<tr><td><strong>PAPER</strong></td><td>Nasdaq-100 (~101, GOOG+GOOGL)</td><td><code>rules_daily_v3_ndx100_paper.json</code></td><td><code>orb_v3_paper_state.json</code></td></tr>
+</tbody>
+</table>
+<p><strong>LIVE NDX-14:</strong></p>
+<div class="card">
+  <strong>NVDA · TSLA · INTC · PLTR · AMD · AAPL · AMZN · GOOGL · MU · MSFT · META · AVGO · WMT · CSCO</strong>
+</div>
+<p class="sub">PAPER runner: <code>python -m paper_broker.run_orb_v3_paper --universe ndx100 …</code> (never with <code>--live</code>). Promote NDX-100 to LIVE only after paper outperforms + explicit approval.</p>
+<table>
+<thead><tr><th>Filter</th><th>Rule</th></tr></thead>
+<tbody>
+<tr><td>Opening-range size</td><td>Between <strong>8</strong> and <strong>250</strong> bps of price (skip dead or absurd ranges)</td></tr>
+<tr><td>Per symbol</td><td><strong>One</strong> trade per symbol per day</td></tr>
+<tr><td>Concurrency</td><td>Max <strong>4</strong> open ORB positions at once</td></tr>
+<tr><td>Same-scan overcrowding</td><td>If more breakouts than free slots → arm <strong>highest opening-range volume</strong> first</td></tr>
+</tbody>
+</table>
+
+<h2 id="or">Opening range</h2>
+<table>
+<thead><tr><th>Item</th><th>Rule</th></tr></thead>
+<tbody>
+<tr><td>Regular hours (RTH)</td><td>Treated as <strong>6:30 AM – 1:00 PM PT</strong></td></tr>
+<tr><td>Opening range</td><td>First RTH hour: <strong>6:30 – 7:30 PT</strong></td></tr>
+<tr><td>OR high / low</td><td><strong>ORH</strong> / <strong>ORL</strong></td></tr>
+<tr><td>Midpoint (stop)</td><td><code>(ORH + ORL) / 2</code></td></tr>
+<tr><td>Entries</td><td><strong>Only after 7:30 PT</strong> — no entries until the OR is complete</td></tr>
+</tbody>
+</table>
+
+<h2 id="entry">How trades are entered / executed</h2>
+<h3>Signal</h3>
+<ul>
+  <li><strong>Long:</strong> first bar close above ORH after the OR</li>
+  <li><strong>Short:</strong> first bar close below ORL after the OR</li>
+  <li>Mode: <strong>first break</strong> only (one attempt per symbol per day)</li>
+</ul>
+
+<h3>Scanner cadence</h3>
+<p>
+  Weekday Grok Bot routines poll about every <strong>15 minutes</strong>
+  (cron minutes <strong>7, 22, 37, 52</strong>) in the <strong>6:00 AM – ~12:00 PM PT</strong> window,
+  then manage toward flatten near the close. <strong>LIVE</strong> and <strong>PAPER</strong> use <em>separate</em> routines.
+  LIVE chat heartbeats are mandatory; PAPER chat notes prefer arms/fills only (lighter).
+  Slack <code>#grok-trades</code> is actionable-only for both — label <strong>LIVE</strong> or <strong>PAPER</strong>.
+</p>
+
+<h3>Orders, state, sizing</h3>
+<ul>
+  <li>Places an Alpaca <strong>bracket</strong> (or equivalent): entry + stop + take-profit</li>
+  <li>LIVE state: <code>orb_v3_live_state.json</code> · PAPER state: <code>orb_v3_paper_state.json</code> (never mixed)</li>
+  <li>LIVE secrets: YOPC <code>live-secrets.json</code> · PAPER secrets: YOPC <code>paper-secrets.json</code> (never paste keys; paper never falls back to live)</li>
+  <li><strong>Cash-only</strong>; max <strong>50%</strong> equity notional per symbol; max <strong>4</strong> concurrent</li>
+  <li>Risk <strong>1.5%</strong> of equity per trade → shares ≈ <code>risk $ / R</code></li>
+</ul>
+
+<h2 id="stop-target">How stop and target are set</h2>
+<table>
+<thead><tr><th>Piece</th><th>Rule</th></tr></thead>
+<tbody>
+<tr><td>Stop</td><td>Always the <strong>opening-range midpoint</strong></td></tr>
+<tr><td>R</td><td><code>|entry − stop|</code></td></tr>
+<tr><td>Target</td><td>Entry ± <strong>2.5R</strong> (long up / short down)</td></tr>
+<tr><td>Trail / scale-out</td><td><strong>None</strong> — all-in / all-out</td></tr>
+</tbody>
+</table>
+
+<h3>Long example</h3>
+<div class="example">ORH = 120, ORL = 116 → mid (stop) = 118
+Breakout long at 120.20 → R = 120.20 − 118 = 2.20
+Target = 120.20 + 2.5 × 2.20 = 125.70
+Stop = 118.00
+→ stop ≈ −1R · target ≈ +2.5R (before costs)</div>
+
+<h3>Short example</h3>
+<div class="example">Same OR: ORH = 120, ORL = 116 → mid (stop) = 118
+Breakout short at 115.80 → R = 118 − 115.80 = 2.20
+Target = 115.80 − 2.5 × 2.20 = 110.30
+Stop = 118.00 (above entry)</div>
+
+<h2 id="exits">How trades are exited</h2>
+<table>
+<thead><tr><th>Priority</th><th>Exit</th><th>Effect</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Stop hit</td><td>Close at OR midpoint → loss ≈ <strong>−1R</strong></td></tr>
+<tr><td>2</td><td>Target hit</td><td>Close at <strong>+2.5R</strong></td></tr>
+<tr><td>3</td><td>EOD flatten</td><td>Still open near close → flatten ~<strong>12:50 PT</strong></td></tr>
+<tr><td>4</td><td>Daily halt</td><td>Day P/L ≤ <strong>−2R</strong> → stop <em>new</em> trades that day</td></tr>
+</tbody>
+</table>
+<p>No overnight. No second trade on a symbol already traded that day.</p>
+
+<h2 id="ops">Ops / monitoring</h2>
+<table>
+<thead><tr><th>Channel</th><th>Role</th></tr></thead>
+<tbody>
+<tr><td>Chat heartbeat</td><td>Every scanner fire (brief LIVE status)</td></tr>
+<tr><td>Slack #grok-trades</td><td>Actionable only (fills, flatten, halt, errors) — top-level</td></tr>
+<tr><td>LIVE dashboard</td><td><a href="https://yoraja.github.io/orb-v3-paper-dashboard/">yoraja.github.io/orb-v3-paper-dashboard/</a> (NDX-14 · <code>--live</code>)</td></tr>
+<tr><td>PAPER dashboard</td><td><a href="https://yoraja.github.io/orb-v3-paper-ndx100-dashboard/">yoraja.github.io/orb-v3-paper-ndx100-dashboard/</a> (NDX-100 · paper)</td></tr>
+<tr><td>Closed lots</td><td>LIVE after <strong>2026-09-25 12:00 PDT</strong> · PAPER after <strong>2026-09-29</strong></td></tr>
+</tbody>
+</table>
+
+<h2 id="source">Source of truth</h2>
+<ul>
+  <li>LIVE rules (NDX-14): <code>daily/docs/rules_daily_v3.json</code></li>
+  <li>PAPER rules (NDX-100): <code>daily/docs/rules_daily_v3_ndx100_paper.json</code></li>
+  <li>Ops: <code>ORB_V3_OPS_GUIDE.md</code>, <code>ALPACA_ORB_V3_PAPER.md</code>, <code>ORB_V3_LIVE_ROUTINE_PROMPTS.md</code>, <code>ORB_V3_PAPER_ROUTINE_PROMPTS.md</code></li>
+  <li>Markdown source for this page: <code>daily/docs/ORB_V3_STRATEGY_EXPLAINER.md</code></li>
+</ul>
+<p class="sub">
+  Whenever universe, entry/exit, risk, target multiple, max concurrent, session times, or live/paper mode changes:
+  update the markdown explainer <strong>and</strong> regenerate/publish this HTML with the dashboard.
+</p>
+
+<div class="footer">
+  <p><a href="https://yoraja.github.io/orb-v3-paper-dashboard/">← LIVE NDX-14 dashboard</a>
+   · <a href="https://yoraja.github.io/orb-v3-paper-ndx100-dashboard/">PAPER NDX-100 dashboard →</a></p>
+  <p>ORB v3 strategy explainer · dual track LIVE NDX-14 + PAPER NDX-100 · Last updated Tue Sep 29, 2026 12:45 PM PT · Not financial advice</p>
+</div>
+</div>
+</body>
+</html>
