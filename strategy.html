@@ -99,7 +99,7 @@ th{color:var(--muted);font-size:.72rem;font-weight:600;text-transform:uppercase;
 <div class="cards">
   <div class="card"><div class="l">LIVE</div><div class="v">NDX-14 · DAILY_ORB_v3</div></div>
   <div class="card"><div class="l">PAPER experiment</div><div class="v">NDX-100 · same ORB v3</div></div>
-  <div class="card"><div class="l">Rules</div><div class="v">3.1.0 / paper-ndx100</div></div>
+  <div class="card"><div class="l">Rules</div><div class="v">3.1.1 LIVE / paper-ndx100</div></div>
   <div class="card"><div class="l">Overnight</div><div class="v bad">Never</div></div>
 </div>
 
@@ -180,7 +180,8 @@ th{color:var(--muted);font-size:.72rem;font-weight:600;text-transform:uppercase;
   <li>Places an Alpaca <strong>bracket</strong> (or equivalent): entry + stop + take-profit</li>
   <li>LIVE state: <code>orb_v3_live_state.json</code> · PAPER state: <code>orb_v3_paper_state.json</code> (never mixed)</li>
   <li>LIVE secrets: YOPC <code>live-secrets.json</code> · PAPER secrets: YOPC <code>paper-secrets.json</code> (never paste keys; paper never falls back to live)</li>
-  <li><strong>Cash-only</strong>; max <strong>50%</strong> equity notional per symbol; max <strong>4</strong> concurrent</li>
+  <li><strong>LIVE cash-only</strong>: max <strong>16%</strong> equity notional per symbol; max <strong>6</strong> concurrent (fits in cash). Cash gate holds entries cash cannot cover.</li>
+  <li><strong>PAPER</strong>: max <strong>50%</strong> notional / max <strong>4</strong> concurrent (paper margin left as-is)</li>
   <li>Risk <strong>1.5%</strong> of equity per trade → shares ≈ <code>risk $ / R</code></li>
 </ul>
 
