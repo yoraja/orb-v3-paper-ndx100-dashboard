@@ -66,7 +66,7 @@ th{color:var(--muted);font-size:.72rem;font-weight:600;text-transform:uppercase;
 </div>
 
 <h1>ORB v3 — How this strategy works <span class="badge badge-live">LIVE · REAL MONEY</span></h1>
-<p class="sub">DAILY_ORB_v3 (LIVE NDX-14) + PAPER NDX-100 experiment · Document last updated: <strong>Tue Sep 29, 2026 12:45 PM PT</strong></p>
+<p class="sub">DAILY_ORB_v3 (LIVE NDX-14) + PAPER NDX-100 experiment · Document last updated: <strong>Mon Oct 5, 2026 10:49 AM PT</strong></p>
 
 <p class="live-banner">Dual track: <strong>LIVE</strong> trades Alpaca LIVE on NDX-14 (real money). <strong>PAPER</strong> runs a parallel Nasdaq-100 ORB experiment on Alpaca paper. Cash-only both. Flat by end of day — no overnight holds. Do not promote NDX-100 to LIVE until paper outperforms and you approve.</p>
 
@@ -180,8 +180,8 @@ th{color:var(--muted);font-size:.72rem;font-weight:600;text-transform:uppercase;
   <li>Places an Alpaca <strong>bracket</strong> (or equivalent): entry + stop + take-profit</li>
   <li>LIVE state: <code>orb_v3_live_state.json</code> · PAPER state: <code>orb_v3_paper_state.json</code> (never mixed)</li>
   <li>LIVE secrets: YOPC <code>live-secrets.json</code> · PAPER secrets: YOPC <code>paper-secrets.json</code> (never paste keys; paper never falls back to live)</li>
-  <li><strong>LIVE cash-only</strong>: max <strong>16%</strong> equity notional per symbol; max <strong>6</strong> concurrent (fits in cash). Cash gate holds entries cash cannot cover.</li>
-  <li><strong>PAPER</strong>: max <strong>50%</strong> notional / max <strong>4</strong> concurrent (paper margin left as-is)</li>
+  <li><strong>LIVE + PAPER cash-only</strong>: max <strong>16%</strong> equity notional per symbol; max <strong>6</strong> concurrent (fits in cash). Cash gate holds entries cash cannot cover (<code>skip_insufficient_cash</code>). No margin.</li>
+  <li><strong>PAPER</strong> uses the same 6 / 16% sizing as LIVE; NDX-100 universe and paper secrets stay separate. Older larger PAPER lots stay until they exit.</li>
   <li>Risk <strong>1.5%</strong> of equity per trade → shares ≈ <code>risk $ / R</code></li>
 </ul>
 
