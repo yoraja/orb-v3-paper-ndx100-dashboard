@@ -62,13 +62,14 @@ th{color:var(--muted);font-size:.72rem;font-weight:600;text-transform:uppercase;
   <a href="#entry">Entries</a>
   <a href="#stop-target">Stop &amp; target</a>
   <a href="#exits">Exits</a>
+  <a href="#limits">Limits</a>
   <a href="#ops">Ops</a>
 </div>
 
 <h1>ORB v3 — How this strategy works <span class="badge badge-live">LIVE · REAL MONEY</span></h1>
-<p class="sub">DAILY_ORB_v3 (LIVE NDX-14) + PAPER NDX-100 experiment · Document last updated: <strong>Mon Oct 5, 2026 10:49 AM PT</strong></p>
+<p class="sub">DAILY_ORB_v3 (LIVE NDX-14) + PAPER NDX-100 experiment · Rules 3.1.1 · Document last updated: <strong>Fri Oct 9, 2026 2:30 PM PT</strong> (line-by-line audit against the trading code)</p>
 
-<p class="live-banner">Dual track: <strong>LIVE</strong> trades Alpaca LIVE on NDX-14 (real money). <strong>PAPER</strong> runs a parallel Nasdaq-100 ORB experiment on Alpaca paper. Cash-only both. Flat by end of day — no overnight holds. Do not promote NDX-100 to LIVE until paper outperforms and you approve.</p>
+<p class="live-banner">Dual track: <strong>LIVE</strong> trades Alpaca LIVE on NDX-14 (real money). <strong>PAPER</strong> runs a parallel Nasdaq-100 ORB experiment on Alpaca paper. Cash-only both. Flat by end of day — no overnight holds. Do not promote NDX-100 to LIVE until paper outperforms and the owner explicitly approves.</p>
 
 <div class="disclaimer">
   <strong>Not financial advice.</strong> This page explains how Yogesh’s automated ORB v3 system is configured to run.
@@ -84,7 +85,9 @@ th{color:var(--muted);font-size:.72rem;font-weight:600;text-transform:uppercase;
     <li><a href="#entry">How trades are entered</a></li>
     <li><a href="#stop-target">How stop and target are set</a></li>
     <li><a href="#exits">How trades are exited</a></li>
+    <li><a href="#exec">Execution / reliability</a></li>
     <li><a href="#ops">Ops / monitoring</a></li>
+    <li><a href="#limits">Risks &amp; limitations</a></li>
     <li><a href="#source">Source of truth</a></li>
   </ol>
 </nav>
@@ -92,26 +95,29 @@ th{color:var(--muted);font-size:.72rem;font-weight:600;text-transform:uppercase;
 <h2 id="what">What this is</h2>
 <p>
   ORB v3 is an <strong>opening-range breakout</strong> day-trading system on liquid Nasdaq names.
-  After the first hour of the regular session, it waits for the first close beyond that hour’s high (long) or low (short),
-  then places a stop and a take-profit and exits the same day.
+  The opening range is the first regular-session hour (one 60-minute bar). After that, whenever a scan sees a 60-minute bar
+  close above the range high (long) or below the range low (short), it sends a market entry with an attached stop and
+  take-profit, and everything is flat the same day.
 </p>
 
 <div class="cards">
   <div class="card"><div class="l">LIVE</div><div class="v">NDX-14 · DAILY_ORB_v3</div></div>
-  <div class="card"><div class="l">PAPER experiment</div><div class="v">NDX-100 · same ORB v3</div></div>
-  <div class="card"><div class="l">Rules</div><div class="v">3.1.1 LIVE / paper-ndx100</div></div>
+  <div class="card"><div class="l">PAPER experiment</div><div class="v">NDX-100 (101 symbols) · same ORB v3</div></div>
+  <div class="card"><div class="l">Rules</div><div class="v">3.1.1 LIVE / 3.1.1-paper-ndx100</div></div>
   <div class="card"><div class="l">Overnight</div><div class="v bad">Never</div></div>
 </div>
 
 <h3>Honesty on backtest performance</h3>
 <p>
-  From <code>rules_daily_v3.json</code> winner metrics (approx. Oct 2023 – Sep 2026, after assumed costs):
+  From <code>rules_daily_v3.json</code> winner metrics (LIVE NDX-14 backtest, Oct 10 2023 – Sep 8 2026, after assumed costs of 5 bps/side + 1¢/share slippage):
 </p>
 <table>
 <thead><tr><th>Metric</th><th>Value</th></tr></thead>
 <tbody>
 <tr><td>Average daily return</td><td>~<strong>0.15%</strong> (0.1548%) — <span class="warn">not 1% per day</span></td></tr>
-<tr><td>Win rate</td><td>~64%</td></tr>
+<tr><td>Median daily return</td><td>0.00% (most days have no trade or net ≈ 0)</td></tr>
+<tr><td>Win rate (per trade)</td><td>~64% (590 trades)</td></tr>
+<tr><td>Profitable days</td><td>~39%</td></tr>
 <tr><td>Max drawdown</td><td>~−2.8%</td></tr>
 <tr><td>Trades per day (avg)</td><td>~0.81</td></tr>
 <tr><td>Sessions with ≥ 1% day</td><td>~8%</td></tr>
@@ -119,30 +125,33 @@ th{color:var(--muted);font-size:.72rem;font-weight:600;text-transform:uppercase;
 </table>
 <p class="sub">
   The aspirational “1% per day” target was <strong>not</strong> achieved (~6.5× short).
-  Many days are flat or small; a few full 2.5R wins pull the average up.
+  The backtest assumed a fill at the breakout level on hourly bars (the rules file itself flags this as possibly optimistic) and modelled at most ~0.8 trades/day;
+  the live system now runs up to 6 concurrent positions, so live behaviour is not a like-for-like match.
+  The PAPER NDX-100 backtest showed ~0.38%/day with ~−4.1% max drawdown (illustrative only; that is exactly what the paper track is testing).
 </p>
 
 <h2 id="universe">How stocks are identified (universe)</h2>
-<p><strong>Dual track</strong> — LIVE stays on a curated liquid-14; PAPER scans the full Nasdaq-100 with the same ORB v3 mechanics.</p>
+<p><strong>Dual track</strong> — the universe is a fixed list in each rules file (no daily screening). LIVE stays on a curated liquid-14; PAPER scans the full Nasdaq-100 with the same ORB v3 mechanics.</p>
 <table>
 <thead><tr><th>Track</th><th>Universe</th><th>Rules file</th><th>State</th></tr></thead>
 <tbody>
-<tr><td><strong>LIVE</strong></td><td>NDX-14</td><td><code>rules_daily_v3.json</code></td><td><code>orb_v3_live_state.json</code></td></tr>
-<tr><td><strong>PAPER</strong></td><td>Nasdaq-100 (~101, GOOG+GOOGL)</td><td><code>rules_daily_v3_ndx100_paper.json</code></td><td><code>orb_v3_paper_state.json</code></td></tr>
+<tr><td><strong>LIVE</strong></td><td>NDX-14 (14 symbols)</td><td><code>rules_daily_v3.json</code></td><td><code>orb_v3_live_state.json</code></td></tr>
+<tr><td><strong>PAPER</strong></td><td>Nasdaq-100: <strong>101</strong> symbols (includes both GOOG and GOOGL), constituent list as of Sep 23, 2026; not auto-refreshed</td><td><code>rules_daily_v3_ndx100_paper.json</code></td><td><code>orb_v3_paper_state.json</code></td></tr>
 </tbody>
 </table>
 <p><strong>LIVE NDX-14:</strong></p>
 <div class="card">
   <strong>NVDA · TSLA · INTC · PLTR · AMD · AAPL · AMZN · GOOGL · MU · MSFT · META · AVGO · WMT · CSCO</strong>
 </div>
-<p class="sub">PAPER runner: <code>python -m paper_broker.run_orb_v3_paper --universe ndx100 …</code> (never with <code>--live</code>). Promote NDX-100 to LIVE only after paper outperforms + explicit approval.</p>
+<p class="sub">PAPER runner: <code>python -m paper_broker.run_orb_v3_paper --universe ndx100 …</code>. The code refuses <code>--universe ndx100</code> or any non-LIVE rules file together with <code>--live</code>. Promote NDX-100 to LIVE only after paper outperforms + explicit approval.</p>
 <table>
 <thead><tr><th>Filter</th><th>Rule</th></tr></thead>
 <tbody>
-<tr><td>Opening-range size</td><td>Between <strong>8</strong> and <strong>250</strong> bps of price (skip dead or absurd ranges)</td></tr>
-<tr><td>Per symbol</td><td><strong>One</strong> trade per symbol per day</td></tr>
-<tr><td>Concurrency</td><td>Max <strong>6</strong> open ORB positions at once (LIVE and PAPER)</td></tr>
-<tr><td>Same-scan overcrowding</td><td>If more breakouts than free slots → arm <strong>highest opening-range volume</strong> first</td></tr>
+<tr><td>Opening-range width</td><td><code>(ORH − ORL) / mid</code> must be between <strong>8</strong> and <strong>250</strong> bps; otherwise the symbol is skipped for the day (<code>range_too_small</code> / <code>range_too_large</code>)</td></tr>
+<tr><td>Per symbol</td><td><strong>One</strong> entry per symbol per day (state file marks the symbol <code>traded</code> once an order is submitted); a symbol already held is never re-entered</td></tr>
+<tr><td>Concurrency</td><td>Max <strong>6</strong> open positions in the universe at once (LIVE and PAPER), counted from live broker positions</td></tr>
+<tr><td>Same-scan overcrowding</td><td>If more breakouts than free slots → enter <strong>highest opening-range volume</strong> first (ties by symbol); the rest wait for a later scan</td></tr>
+<tr><td>Minimum stop distance</td><td>Skip if entry-to-stop distance &lt; <strong>$0.05</strong>, or if sizing gives &lt; 1 share</td></tr>
 </tbody>
 </table>
 
@@ -150,114 +159,165 @@ th{color:var(--muted);font-size:.72rem;font-weight:600;text-transform:uppercase;
 <table>
 <thead><tr><th>Item</th><th>Rule</th></tr></thead>
 <tbody>
-<tr><td>Regular hours (RTH)</td><td>Treated as <strong>6:30 AM – 1:00 PM PT</strong></td></tr>
-<tr><td>Opening range</td><td>First RTH hour: <strong>6:30 – 7:30 PT</strong></td></tr>
-<tr><td>OR high / low</td><td><strong>ORH</strong> / <strong>ORL</strong></td></tr>
+<tr><td>Bar source</td><td><strong>60-minute bars from Yahoo Finance</strong> (via <code>yfinance</code>), cached locally and auto-refreshed when stale (&gt;75 min old during market hours). Alpaca is used for orders, account and quotes, not for the signal bars.</td></tr>
+<tr><td>Regular hours (RTH)</td><td><strong>6:30 AM – 1:00 PM PT</strong> (9:30–16:00 ET)</td></tr>
+<tr><td>Opening range</td><td>First RTH hourly bar: <strong>6:30 – 7:30 PT</strong></td></tr>
+<tr><td>OR high / low</td><td><strong>ORH</strong> / <strong>ORL</strong> = that bar’s high / low</td></tr>
 <tr><td>Midpoint (stop)</td><td><code>(ORH + ORL) / 2</code></td></tr>
-<tr><td>Entries</td><td><strong>Only after 7:30 PT</strong> — no entries until the OR is complete</td></tr>
+<tr><td>Entries</td><td><strong>Only after 7:30 PT</strong>. If today’s OR isn’t available yet, the symbol is marked <code>awaiting_today_or</code> and nothing is sent. Live orders are refused outside RTH or if the data isn’t today’s session.</td></tr>
+<tr><td>Data health check</td><td>7:37 PT routine confirms today’s OR bars exist and are fresh for both tracks</td></tr>
 </tbody>
 </table>
 
 <h2 id="entry">How trades are entered / executed</h2>
 <h3>Signal</h3>
 <ul>
-  <li><strong>Long:</strong> first bar close above ORH after the OR</li>
-  <li><strong>Short:</strong> first bar close below ORL after the OR</li>
-  <li>Mode: <strong>first break</strong> only (one attempt per symbol per day)</li>
+  <li><strong>Long:</strong> the first post-OR hourly bar that <em>opens at or below ORH and closes above it</em>. Reference entry = <code>max(ORH, that bar’s open)</code> — i.e. ORH.</li>
+  <li><strong>Short:</strong> the first post-OR hourly bar that <em>opens at or above ORL and closes below it</em>. Reference entry = ORL.</li>
+  <li><strong>Polling fallback:</strong> if no such bar exists but the latest bar (which can be the still-forming hour) is closing beyond the range, that counts too, with the latest price as the reference entry.</li>
+  <li>Shorts are allowed (<code>allow_short: true</code>). No trend, ATR or time-of-day filter.</li>
+  <li>Once a symbol has been entered it is not entered again that day. Note: the code does not check that price is <em>still</em> beyond the level when it enters — a breakout bar from earlier in the day still triggers if the symbol has not traded yet.</li>
 </ul>
+
+<h3>Entry cutoff</h3>
+<p>
+  The rules file has <strong>no entry cutoff</strong> (<code>entry_cutoff: null</code>; a 2 PM ET cutoff was tested and rejected).
+  The code only refuses new orders outside RTH. In practice the last scans that can enter are near the close; the routine instructions say to
+  avoid risky new entries after ~12:45 PT, but this is an instruction, not a code-enforced gate.
+  <span class="warn">A late entry may be held only minutes before the EOD flatten.</span>
+</p>
 
 <h3>Scanner cadence</h3>
 <p>
-  Weekday Grok Bot routines poll about every <strong>15 minutes</strong>
-  (cron minutes <strong>7, 22, 37, 52</strong>) in the <strong>6:00 AM – ~12:00 PM PT</strong> window,
-  then manage toward flatten near the close. <strong>LIVE</strong> and <strong>PAPER</strong> use <em>separate</em> routines.
-  LIVE chat heartbeats are mandatory; PAPER chat notes prefer arms/fills only (lighter).
-  Slack <code>#grok-trades</code> is actionable-only for both — label <strong>LIVE</strong> or <strong>PAPER</strong>.
+  Weekday routines run every <strong>15 minutes</strong> at <strong>:07, :22, :37, :52</strong> from <strong>6:07 AM to 12:52 PM PT</strong>.
+  Scans before 7:30 only confirm the OR isn’t ready; the first scan that can enter is <strong>7:37 PT</strong>.
+  <strong>LIVE</strong> and <strong>PAPER</strong> use <em>separate</em> routines, keys and state files. Each scan:
 </p>
+<ol>
+  <li>Verifies its Alpaca keys with a read-only call (backup copy if they fail; see Execution).</li>
+  <li>Refreshes hourly bars and computes each symbol’s OR, width filter and breakout status.</li>
+  <li>Runs a dry-run plan, then the live <code>--arm</code>: concurrency gate → OR-volume priority → cash gate → bracket submit.</li>
+  <li>Writes a status/heartbeat file, posts actionable alerts, and refreshes the dashboard.</li>
+</ol>
 
 <h3>Orders, state, sizing</h3>
 <ul>
-  <li>Places an Alpaca <strong>bracket</strong> (or equivalent): entry + stop + take-profit</li>
-  <li>LIVE state: <code>orb_v3_live_state.json</code> · PAPER state: <code>orb_v3_paper_state.json</code> (never mixed)</li>
-  <li>Keys: stored on the trading computer and verified before every run; separate LIVE and PAPER keys (never pasted; paper never falls back to live)</li>
-  <li><strong>LIVE + PAPER cash-only</strong>: max <strong>16%</strong> equity notional per symbol; max <strong>6</strong> concurrent (fits in cash). Cash gate holds entries cash cannot cover (<code>skip_insufficient_cash</code>). No margin.</li>
-  <li><strong>PAPER</strong> uses the same 6 / 16% sizing as LIVE; NDX-100 universe and paper secrets stay separate.</li>
-  <li>Risk <strong>1.5%</strong> of equity per trade → shares ≈ <code>risk $ / R</code></li>
+  <li>Entry is an Alpaca <strong>market order, DAY, bracket class</strong>: take-profit <strong>limit</strong> at the target and <strong>stop</strong> (stop-market) at the OR midpoint, both rounded to the cent.</li>
+  <li>LIVE state: <code>orb_v3_live_state.json</code> · PAPER state: <code>orb_v3_paper_state.json</code> (never mixed). Default mode is paper; LIVE needs an explicit <code>--live</code>.</li>
+  <li>Keys: separate LIVE and PAPER keys, stored on the trading computer and verified before every run (never pasted into chat; paper never falls back to live).</li>
+  <li><strong>Risk per trade 1.5%</strong> of account equity: <code>shares = (equity × 1.5%) / R</code>, where R = |reference entry − OR midpoint|.</li>
+  <li><strong>Notional cap 16%</strong> of equity per symbol: <code>shares ≤ equity × 16% / reference entry</code>. Quantity = the smaller of the two, rounded <em>down</em> to whole shares. With OR-mid stops the 16% cap is usually the binding limit, so actual risk is often well below 1.5%.</li>
+  <li><strong>Cash gate (both tracks):</strong> entries are taken in priority order while cash lasts; any entry whose notional exceeds remaining account cash (+$1 tolerance) is held as <code>skip_insufficient_cash</code>. No margin.</li>
+  <li>Max <strong>6</strong> concurrent × 16% ≈ 96% of equity, so a full book fits in cash.</li>
+  <li><strong>PAPER</strong> uses the same 6 / 16% / 1.5% sizing as LIVE.</li>
 </ul>
 
 <h2 id="stop-target">How stop and target are set</h2>
 <table>
-<thead><tr><th>Piece</th><th>Rule</th></tr></thead>
+<thead><tr><th>Piece</th><th>Rule (as coded)</th></tr></thead>
 <tbody>
 <tr><td>Stop</td><td>Always the <strong>opening-range midpoint</strong></td></tr>
-<tr><td>R</td><td><code>|entry − stop|</code></td></tr>
-<tr><td>Target</td><td>Entry ± <strong>2.5R</strong> (long up / short down)</td></tr>
+<tr><td>R</td><td><code>|reference entry − stop|</code>. The reference entry is the <strong>breakout level</strong> (ORH/ORL, or the latest price in the polling fallback) — <strong>not</strong> the actual fill.</td></tr>
+<tr><td>Target</td><td>Reference entry ± <strong>2.5R</strong> (long up / short down). The 2.5 multiple is fixed in code.</td></tr>
+<tr><td>After the fill</td><td>Stop and target are absolute prices sent with the order and never re-based to the fill price</td></tr>
 <tr><td>Trail / scale-out</td><td><strong>None</strong> — all-in / all-out</td></tr>
 </tbody>
 </table>
+<p class="warn">
+  <strong>Late fills change the real reward-to-risk.</strong> Scans run every 15 minutes, so the market order often fills well past the breakout level.
+  For a long that filled above ORH, the distance to the stop grows and the distance to the target shrinks; the realized ratio can be far below 2.5:1
+  (e.g. 2.05 reward vs 3.83 risk per share on one live NVDA short), and a fill beyond the target level is possible in principle.
+</p>
 
 <h3>Long example</h3>
 <div class="example">ORH = 120, ORL = 116 → mid (stop) = 118
-Breakout long at 120.20 → R = 120.20 − 118 = 2.20
-Target = 120.20 + 2.5 × 2.20 = 125.70
-Stop = 118.00
-→ stop ≈ −1R · target ≈ +2.5R (before costs)</div>
+Breakout bar closes above 120 → reference entry = 120.00 → R = 2.00
+Target = 120 + 2.5 × 2.00 = 125.00 · Stop = 118.00
+Planned: −1R / +2.5R
+If the market order fills at 121.50: risk 3.50/share, reward 3.50/share → 1 : 1 realized</div>
 
 <h3>Short example</h3>
 <div class="example">Same OR: ORH = 120, ORL = 116 → mid (stop) = 118
-Breakout short at 115.80 → R = 118 − 115.80 = 2.20
-Target = 115.80 − 2.5 × 2.20 = 110.30
-Stop = 118.00 (above entry)</div>
+Breakout bar closes below 116 → reference entry = 116.00 → R = 2.00
+Target = 116 − 2.5 × 2.00 = 111.00 · Stop = 118.00 (above entry)</div>
+
+<h3>Sizing example</h3>
+<div class="example">Equity $50,000 · reference entry 120 · R = 2.00
+Risk sizing: 50,000 × 1.5% / 2.00 = 375 shares
+Notional cap: 50,000 × 16% / 120 = 66.7 → 66 shares  ← binding
+Order: 66 shares (≈ $7,920 notional, ≈ $132 at risk = 0.26% of equity)</div>
 
 <h2 id="exits">How trades are exited</h2>
 <table>
-<thead><tr><th>Priority</th><th>Exit</th><th>Effect</th></tr></thead>
+<thead><tr><th>Exit</th><th>How</th><th>Effect</th></tr></thead>
 <tbody>
-<tr><td>1</td><td>Stop hit</td><td>Close at OR midpoint → loss ≈ <strong>−1R</strong></td></tr>
-<tr><td>2</td><td>Target hit</td><td>Close at <strong>+2.5R</strong></td></tr>
-<tr><td>3</td><td>EOD flatten</td><td>Still open near close → flatten at <strong>12:50 PT</strong> (LIVE) / <strong>12:55 PT</strong> (PAPER); <strong>12:58 PT</strong> backstop sweep</td></tr>
-<tr><td>4</td><td>Daily halt</td><td>Day P/L ≤ <strong>−2R</strong> → stop <em>new</em> trades that day</td></tr>
+<tr><td>Stop hit</td><td>Bracket stop leg at OR midpoint (stop-market, can slip)</td><td>Loss ≈ −1R vs the breakout level; larger in $ if the fill was late</td></tr>
+<tr><td>Target hit</td><td>Bracket take-profit limit leg</td><td>+2.5R vs the breakout level</td></tr>
+<tr><td>EOD flatten</td><td><strong>12:50 PT</strong> LIVE / <strong>12:55 PT</strong> PAPER: cancel open orders on universe symbols, then a market order per position; if it isn’t filled within ~6 s (or the market is already closed), cancel and send an <strong>extended-hours limit</strong> order (DAY, ~15 bps through the bid/ask/last). If anything is still open, one more extended-hours retry. Never reports “flat” while a position remains.</td><td>Flat before the 1:00 PT close</td></tr>
+<tr><td>Backstop</td><td><strong>12:58 PT</strong> safety sweep from the owner’s side, straight through Alpaca</td><td>Closes anything still open</td></tr>
 </tbody>
 </table>
 <p>No overnight. No second trade on a symbol already traded that day.</p>
+<p class="warn">
+  <strong>Daily −2R halt: configured but not active.</strong> The rules file sets <code>daily_loss_limit_R: −2.0</code> and the code checks it,
+  but nothing updates the day’s realized R (it stays 0), so the halt never triggers today. There is currently <strong>no daily loss limit</strong>
+  beyond per-trade stops and the 6-position cap.
+</p>
 
 <h2 id="exec">Execution / reliability</h2>
 <ul>
   <li><strong>Trading computer first:</strong> all scans, EOD flattens and checks run on the bot's own computer; keys are verified with a read-only Alpaca call before every run.</li>
-  <li><strong>Key fallback:</strong> only if local keys are missing or rejected are fresh copies pulled from the owner's PC, with an alert naming the reason.</li>
-  <li><strong>Morning health check (7:37 PT):</strong> disk, code environment, keys and Alpaca access; problems alerted in one line.</li>
-  <li><strong>Heartbeat:</strong> each run publishes a status file alongside each dashboard; the owner's PC alerts if it goes quiet (&gt;35 min) or reports a problem.</li>
+  <li><strong>Key fallback:</strong> only if local keys are missing or rejected are fresh copies pulled from the owner's PC, with an alert naming the reason. Trading halts only if both fail.</li>
+  <li><strong>Morning health check (7:37 PT):</strong> OR/bar freshness, disk, code environment, keys and Alpaca access; problems alerted in one line.</li>
+  <li><strong>Heartbeat:</strong> each run publishes a status file alongside each dashboard; the owner's PC checks it every 10 minutes from 7:40 AM to 1:00 PM PT and alerts if it goes quiet (&gt;35 min) or reports a problem.</li>
   <li><strong>12:58 PT backstop flatten:</strong> run from the owner's PC directly through Alpaca if anything is still open at the close.</li>
+  <li><strong>Wrong-account guard:</strong> EOD refuses to mark “flat” if the broker suddenly shows a fresh $50,000 / 0-position account while state says positions were open (likely wrong keys).</li>
 </ul>
 
 <h2 id="ops">Ops / monitoring</h2>
 <table>
 <thead><tr><th>Channel</th><th>Role</th></tr></thead>
 <tbody>
-<tr><td>Chat heartbeat</td><td>Every scanner fire (brief LIVE status)</td></tr>
-<tr><td>Slack #grok-trades</td><td>Actionable only (fills, flatten, halt, errors) — top-level</td></tr>
-<tr><td>LIVE dashboard</td><td><a href="https://yoraja.github.io/orb-v3-paper-dashboard/">yoraja.github.io/orb-v3-paper-dashboard/</a> (NDX-14 · <code>--live</code>)</td></tr>
+<tr><td>Chat</td><td>LIVE: brief status on every scan. PAPER: only on entries/fills. Key, halt and health alerts always.</td></tr>
+<tr><td>Slack #grok-trades</td><td>Actionable only (fills, exits, flatten, halts, errors) — top-level, labelled LIVE or PAPER</td></tr>
+<tr><td>LIVE dashboard</td><td><a href="https://yoraja.github.io/orb-v3-paper-dashboard/">yoraja.github.io/orb-v3-paper-dashboard/</a> (NDX-14 · real money)</td></tr>
 <tr><td>PAPER dashboard</td><td><a href="https://yoraja.github.io/orb-v3-paper-ndx100-dashboard/">yoraja.github.io/orb-v3-paper-ndx100-dashboard/</a> (NDX-100 · paper)</td></tr>
+<tr><td>Dashboard data</td><td>Equity, positions and orders from Alpaca; closed trades are fills matched first-in-first-out, grouped per symbol per day</td></tr>
 <tr><td>Closed lots</td><td>LIVE after <strong>2026-09-25 12:00 PDT</strong> · PAPER after <strong>2026-09-29</strong></td></tr>
+<tr><td>Promotion rule</td><td>NDX-100 moves to LIVE only after PAPER outperforms LIVE <strong>and</strong> the owner explicitly approves; nothing is automatic</td></tr>
 </tbody>
 </table>
 
+<h2 id="limits">Risks &amp; limitations</h2>
+<ul>
+  <li><strong>Real money</strong> on LIVE. Losses are possible on any day; the backtest drawdown is not a cap.</li>
+  <li><strong>No active daily loss limit</strong> (see the −2R note above).</li>
+  <li><strong>Late fills</strong>: 15-minute polling on hourly bars means entries can be well past the breakout, worsening the real reward-to-risk; stale breakouts from earlier in the day can still trigger.</li>
+  <li><strong>No time cutoff in code</strong>: entries near the close have little time to work.</li>
+  <li><strong>Data</strong>: signals depend on free Yahoo Finance hourly bars, which can be delayed, missing or revised.</li>
+  <li><strong>Slippage</strong>: market entries and stop-market exits can fill worse than planned, especially at the open of a bar or in fast moves.</li>
+  <li><strong>Concentration</strong>: up to 6 positions in correlated large-cap tech; a broad move can hit several stops together.</li>
+  <li><strong>PAPER universe</strong> is a fixed Sep 23, 2026 snapshot; index changes aren’t picked up automatically. Paper fills are simulated and more forgiving than live.</li>
+  <li><strong>Operations</strong>: relies on scheduled routines and broker/API uptime; late or failed runs are mitigated (heartbeat, 12:58 backstop) but not eliminated.</li>
+</ul>
+
 <h2 id="source">Source of truth</h2>
 <ul>
+  <li>Code: <code>paper_broker/run_orb_v3_paper.py</code> (signal, sizing, bracket, cash/concurrency gates, EOD flatten)</li>
   <li>LIVE rules (NDX-14): <code>daily/docs/rules_daily_v3.json</code></li>
   <li>PAPER rules (NDX-100): <code>daily/docs/rules_daily_v3_ndx100_paper.json</code></li>
-  <li>Ops: <code>ORB_V3_OPS_GUIDE.md</code>, <code>ALPACA_ORB_V3_PAPER.md</code>, <code>ORB_V3_LIVE_ROUTINE_PROMPTS.md</code>, <code>ORB_V3_PAPER_ROUTINE_PROMPTS.md</code></li>
+  <li>Ops: <code>ORB_V3_OPS_GUIDE.md</code>, <code>ALPACA_ORB_V3_PAPER.md</code>, <code>ORB_V3_BOX_FIRST_ROUTINE_PROMPTS.md</code></li>
   <li>Markdown source for this page: <code>daily/docs/ORB_V3_STRATEGY_EXPLAINER.md</code></li>
 </ul>
 <p class="sub">
   Whenever universe, entry/exit, risk, target multiple, max concurrent, session times, or live/paper mode changes:
-  update the markdown explainer <strong>and</strong> regenerate/publish this HTML with the dashboard.
+  update the markdown explainer <strong>and</strong> this HTML, then publish with the dashboard.
 </p>
 
 <div class="footer">
   <p><a href="https://yoraja.github.io/orb-v3-paper-dashboard/">← LIVE NDX-14 dashboard</a>
    · <a href="https://yoraja.github.io/orb-v3-paper-ndx100-dashboard/">PAPER NDX-100 dashboard →</a></p>
-  <p>ORB v3 strategy explainer · dual track LIVE NDX-14 + PAPER NDX-100 · Last updated Tue Sep 29, 2026 12:45 PM PT · Not financial advice</p>
+  <p>ORB v3 strategy explainer · dual track LIVE NDX-14 + PAPER NDX-100 · Last updated Fri Oct 9, 2026 2:30 PM PT · Not financial advice</p>
 </div>
 </div>
 </body>
