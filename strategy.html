@@ -67,7 +67,7 @@ th{color:var(--muted);font-size:.72rem;font-weight:600;text-transform:uppercase;
 </div>
 
 <h1>ORB v3 — How this strategy works <span class="badge badge-live">LIVE · REAL MONEY</span></h1>
-<p class="sub">DAILY_ORB_v3 (LIVE NDX-14) + PAPER NDX-100 experiment · Rules 3.1.1 · Document last updated: <strong>Fri Oct 9, 2026 2:30 PM PT</strong> (line-by-line audit against the trading code)</p>
+<p class="sub">DAILY_ORB_v3 (LIVE NDX-14) + PAPER NDX-100 experiment · Rules 3.1.1 · Document last updated: <strong>Fri Oct 9, 2026 2:20 PM PT</strong> (audited against the code; daily −2R halt, 12:45 PT cutoff, live R:R ≥ 1.5 and breakout-holding checks now enforced)</p>
 
 <p class="live-banner">Dual track: <strong>LIVE</strong> trades Alpaca LIVE on NDX-14 (real money). <strong>PAPER</strong> runs a parallel Nasdaq-100 ORB experiment on Alpaca paper. Cash-only both. Flat by end of day — no overnight holds. Do not promote NDX-100 to LIVE until paper outperforms and the owner explicitly approves.</p>
 
@@ -176,15 +176,16 @@ th{color:var(--muted);font-size:.72rem;font-weight:600;text-transform:uppercase;
   <li><strong>Short:</strong> the first post-OR hourly bar that <em>opens at or above ORL and closes below it</em>. Reference entry = ORL.</li>
   <li><strong>Polling fallback:</strong> if no such bar exists but the latest bar (which can be the still-forming hour) is closing beyond the range, that counts too, with the latest price as the reference entry.</li>
   <li>Shorts are allowed (<code>allow_short: true</code>). No trend, ATR or time-of-day filter.</li>
-  <li>Once a symbol has been entered it is not entered again that day. Note: the code does not check that price is <em>still</em> beyond the level when it enters — a breakout bar from earlier in the day still triggers if the symbol has not traded yet.</li>
+  <li>Once a symbol has been entered it is not entered again that day. </li>
+  <li><strong>Breakout must still hold (implemented Oct 9, 2026):</strong> right before entry the current price (latest trade, else ask/bid, else last bar close) must still be <em>above ORH</em> for a long or <em>below ORL</em> for a short; otherwise the entry is skipped as <code>skip_breakout_not_holding</code>.</li>
+  <li><strong>Minimum live reward-to-risk 1.5 (implemented Oct 9, 2026):</strong> using that current price against the fixed stop and target, reward ÷ risk must be ≥ <code>min_live_rr: 1.5</code>; otherwise <code>skip_poor_rr (x.xx &lt; 1.5)</code>. Stop and target themselves are unchanged.</li>
 </ul>
 
 <h3>Entry cutoff</h3>
 <p>
-  The rules file has <strong>no entry cutoff</strong> (<code>entry_cutoff: null</code>; a 2 PM ET cutoff was tested and rejected).
-  The code only refuses new orders outside RTH. In practice the last scans that can enter are near the close; the routine instructions say to
-  avoid risky new entries after ~12:45 PT, but this is an instruction, not a code-enforced gate.
-  <span class="warn">A late entry may be held only minutes before the EOD flatten.</span>
+  <strong>Hard entry cutoff at 12:45 PT, enforced in code (implemented Oct 9, 2026).</strong> Rules key <code>no_entry_after_pt: "12:45"</code> (defaults to 12:45 if missing):
+  at or after 12:45 PT no new entries are placed and candidates are reported as <code>skip_entry_cutoff</code>. 12:44 PT can still enter; 12:45 cannot.
+  So the 12:52 scan can never open a trade after LIVE’s 12:50 flatten. (The backtest’s <code>entry_cutoff</code> filter stays null; this is a live-trading guard.)
 </p>
 
 <h3>Scanner cadence</h3>
@@ -196,7 +197,7 @@ th{color:var(--muted);font-size:.72rem;font-weight:600;text-transform:uppercase;
 <ol>
   <li>Verifies its Alpaca keys with a read-only call (backup copy if they fail; see Execution).</li>
   <li>Refreshes hourly bars and computes each symbol’s OR, width filter and breakout status.</li>
-  <li>Runs a dry-run plan, then the live <code>--arm</code>: concurrency gate → OR-volume priority → cash gate → bracket submit.</li>
+  <li>Runs a dry-run plan, then the live <code>--arm</code>: daily −2R halt → 12:45 PT cutoff → concurrency gate → OR-volume priority → breakout-still-holding → live R:R ≥ 1.5 → size on current price → cash gate → bracket submit.</li>
   <li>Writes a status/heartbeat file, posts actionable alerts, and refreshes the dashboard.</li>
 </ol>
 
@@ -205,8 +206,8 @@ th{color:var(--muted);font-size:.72rem;font-weight:600;text-transform:uppercase;
   <li>Entry is an Alpaca <strong>market order, DAY, bracket class</strong>: take-profit <strong>limit</strong> at the target and <strong>stop</strong> (stop-market) at the OR midpoint, both rounded to the cent.</li>
   <li>LIVE state: <code>orb_v3_live_state.json</code> · PAPER state: <code>orb_v3_paper_state.json</code> (never mixed). Default mode is paper; LIVE needs an explicit <code>--live</code>.</li>
   <li>Keys: separate LIVE and PAPER keys, stored on the trading computer and verified before every run (never pasted into chat; paper never falls back to live).</li>
-  <li><strong>Risk per trade 1.5%</strong> of account equity: <code>shares = (equity × 1.5%) / R</code>, where R = |reference entry − OR midpoint|.</li>
-  <li><strong>Notional cap 16%</strong> of equity per symbol: <code>shares ≤ equity × 16% / reference entry</code>. Quantity = the smaller of the two, rounded <em>down</em> to whole shares. With OR-mid stops the 16% cap is usually the binding limit, so actual risk is often well below 1.5%.</li>
+  <li><strong>Risk per trade 1.5%</strong> of account equity, sized on the <strong>current price</strong> (implemented Oct 9, 2026): <code>shares = (equity × 1.5%) / |current price − OR midpoint|</code>, so actual risk stays ≤ 1.5% even on a late fill.</li>
+  <li><strong>Notional cap 16%</strong> of equity per symbol: <code>shares ≤ equity × 16% / current price</code>. Quantity = the smaller of the two, rounded <em>down</em> to whole shares. With OR-mid stops the 16% cap is usually the binding limit, so actual risk is often well below 1.5%.</li>
   <li><strong>Cash gate (both tracks):</strong> entries are taken in priority order while cash lasts; any entry whose notional exceeds remaining account cash (+$1 tolerance) is held as <code>skip_insufficient_cash</code>. No margin.</li>
   <li>Max <strong>6</strong> concurrent × 16% ≈ 96% of equity, so a full book fits in cash.</li>
   <li><strong>PAPER</strong> uses the same 6 / 16% / 1.5% sizing as LIVE.</li>
@@ -217,16 +218,17 @@ th{color:var(--muted);font-size:.72rem;font-weight:600;text-transform:uppercase;
 <thead><tr><th>Piece</th><th>Rule (as coded)</th></tr></thead>
 <tbody>
 <tr><td>Stop</td><td>Always the <strong>opening-range midpoint</strong></td></tr>
-<tr><td>R</td><td><code>|reference entry − stop|</code>. The reference entry is the <strong>breakout level</strong> (ORH/ORL, or the latest price in the polling fallback) — <strong>not</strong> the actual fill.</td></tr>
+<tr><td>R (for stop/target)</td><td><code>|reference entry − stop|</code>. The reference entry is the <strong>breakout level</strong> (ORH/ORL, or the latest price in the polling fallback). Position <em>size</em> uses the current price instead (see sizing).</td></tr>
 <tr><td>Target</td><td>Reference entry ± <strong>2.5R</strong> (long up / short down). The 2.5 multiple is fixed in code.</td></tr>
 <tr><td>After the fill</td><td>Stop and target are absolute prices sent with the order and never re-based to the fill price</td></tr>
 <tr><td>Trail / scale-out</td><td><strong>None</strong> — all-in / all-out</td></tr>
 </tbody>
 </table>
-<p class="warn">
-  <strong>Late fills change the real reward-to-risk.</strong> Scans run every 15 minutes, so the market order often fills well past the breakout level.
-  For a long that filled above ORH, the distance to the stop grows and the distance to the target shrinks; the realized ratio can be far below 2.5:1
-  (e.g. 2.05 reward vs 3.83 risk per share on one live NVDA short), and a fill beyond the target level is possible in principle.
+<p>
+  <strong>Late-fill protection (implemented Oct 9, 2026).</strong> Scans run every 15 minutes, so price can be past the breakout level by the time the order goes in.
+  Right before submitting, the code re-checks with the current price: it skips if price is back inside the range (<code>skip_breakout_not_holding</code>)
+  or if reward ÷ risk to the fixed stop/target is below <strong>1.5</strong> (<code>skip_poor_rr</code>), and it sizes on current price → stop so risk stays ≤ 1.5%.
+  A market order can still slip a little past the price checked.
 </p>
 
 <h3>Long example</h3>
@@ -234,7 +236,8 @@ th{color:var(--muted);font-size:.72rem;font-weight:600;text-transform:uppercase;
 Breakout bar closes above 120 → reference entry = 120.00 → R = 2.00
 Target = 120 + 2.5 × 2.00 = 125.00 · Stop = 118.00
 Planned: −1R / +2.5R
-If the market order fills at 121.50: risk 3.50/share, reward 3.50/share → 1 : 1 realized</div>
+If price is 121.50 when the order would go in: risk 3.50, reward 3.50 → 1.00 &lt; 1.5 → skip_poor_rr
+If price is 120.60: risk 2.60, reward 4.40 → 1.69 ≥ 1.5 → enter</div>
 
 <h3>Short example</h3>
 <div class="example">Same OR: ORH = 120, ORL = 116 → mid (stop) = 118
@@ -242,10 +245,10 @@ Breakout bar closes below 116 → reference entry = 116.00 → R = 2.00
 Target = 116 − 2.5 × 2.00 = 111.00 · Stop = 118.00 (above entry)</div>
 
 <h3>Sizing example</h3>
-<div class="example">Equity $50,000 · reference entry 120 · R = 2.00
-Risk sizing: 50,000 × 1.5% / 2.00 = 375 shares
-Notional cap: 50,000 × 16% / 120 = 66.7 → 66 shares  ← binding
-Order: 66 shares (≈ $7,920 notional, ≈ $132 at risk = 0.26% of equity)</div>
+<div class="example">Equity $50,000 · ORH 120 · stop 118 · current price 120.60 (risk 2.60/share)
+Risk sizing: 50,000 × 1.5% / 2.60 = 288.5 → 288 shares
+Notional cap: 50,000 × 16% / 120.60 = 66.3 → 66 shares  ← binding
+Order: 66 shares (≈ $7,960 notional, ≈ $172 at risk = 0.34% of equity)</div>
 
 <h2 id="exits">How trades are exited</h2>
 <table>
@@ -258,10 +261,11 @@ Order: 66 shares (≈ $7,920 notional, ≈ $132 at risk = 0.26% of equity)</div>
 </tbody>
 </table>
 <p>No overnight. No second trade on a symbol already traded that day.</p>
-<p class="warn">
-  <strong>Daily −2R halt: configured but not active.</strong> The rules file sets <code>daily_loss_limit_R: −2.0</code> and the code checks it,
-  but nothing updates the day’s realized R (it stays 0), so the halt never triggers today. There is currently <strong>no daily loss limit</strong>
-  beyond per-trade stops and the 6-position cap.
+<p>
+  <strong>Daily −2R halt (implemented Oct 9, 2026).</strong> Before every arm, each track recomputes today’s realized R from Alpaca fills
+  (per closed ORB trade: P/L ÷ planned 1R, where 1R = qty × |planned entry − stop|) and stores it in its own state file keyed by the PT date.
+  When the total is ≤ <code>daily_loss_limit_R: −2.0</code>, new entries are blocked for the rest of that day and the scan prints
+  <code>DAILY HALT: realized −X.XR ≤ −2R</code> for alerts. Open positions keep their brackets and are still flattened at EOD.
 </p>
 
 <h2 id="exec">Execution / reliability</h2>
@@ -291,9 +295,9 @@ Order: 66 shares (≈ $7,920 notional, ≈ $132 at risk = 0.26% of equity)</div>
 <h2 id="limits">Risks &amp; limitations</h2>
 <ul>
   <li><strong>Real money</strong> on LIVE. Losses are possible on any day; the backtest drawdown is not a cap.</li>
-  <li><strong>No active daily loss limit</strong> (see the −2R note above).</li>
-  <li><strong>Late fills</strong>: 15-minute polling on hourly bars means entries can be well past the breakout, worsening the real reward-to-risk; stale breakouts from earlier in the day can still trigger.</li>
-  <li><strong>No time cutoff in code</strong>: entries near the close have little time to work.</li>
+  <li><strong>Daily −2R halt</strong> counts only <em>closed</em> trades; open losers don’t count until they exit, so a day can end below −2R.</li>
+  <li><strong>Late fills</strong>: the live R:R and breakout checks use the price just before submit; a market order can still slip beyond it.</li>
+  <li><strong>12:45 PT cutoff</strong>: an entry at 12:44 has only minutes before the EOD flatten.</li>
   <li><strong>Data</strong>: signals depend on free Yahoo Finance hourly bars, which can be delayed, missing or revised.</li>
   <li><strong>Slippage</strong>: market entries and stop-market exits can fill worse than planned, especially at the open of a bar or in fast moves.</li>
   <li><strong>Concentration</strong>: up to 6 positions in correlated large-cap tech; a broad move can hit several stops together.</li>
@@ -317,7 +321,7 @@ Order: 66 shares (≈ $7,920 notional, ≈ $132 at risk = 0.26% of equity)</div>
 <div class="footer">
   <p><a href="https://yoraja.github.io/orb-v3-paper-dashboard/">← LIVE NDX-14 dashboard</a>
    · <a href="https://yoraja.github.io/orb-v3-paper-ndx100-dashboard/">PAPER NDX-100 dashboard →</a></p>
-  <p>ORB v3 strategy explainer · dual track LIVE NDX-14 + PAPER NDX-100 · Last updated Fri Oct 9, 2026 2:30 PM PT · Not financial advice</p>
+  <p>ORB v3 strategy explainer · dual track LIVE NDX-14 + PAPER NDX-100 · Last updated Fri Oct 9, 2026 2:20 PM PT · Not financial advice</p>
 </div>
 </div>
 </body>
