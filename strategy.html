@@ -141,7 +141,7 @@ th{color:var(--muted);font-size:.72rem;font-weight:600;text-transform:uppercase;
 <tbody>
 <tr><td>Opening-range size</td><td>Between <strong>8</strong> and <strong>250</strong> bps of price (skip dead or absurd ranges)</td></tr>
 <tr><td>Per symbol</td><td><strong>One</strong> trade per symbol per day</td></tr>
-<tr><td>Concurrency</td><td>Max <strong>4</strong> open ORB positions at once</td></tr>
+<tr><td>Concurrency</td><td>Max <strong>6</strong> open ORB positions at once (LIVE and PAPER)</td></tr>
 <tr><td>Same-scan overcrowding</td><td>If more breakouts than free slots → arm <strong>highest opening-range volume</strong> first</td></tr>
 </tbody>
 </table>
@@ -179,9 +179,9 @@ th{color:var(--muted);font-size:.72rem;font-weight:600;text-transform:uppercase;
 <ul>
   <li>Places an Alpaca <strong>bracket</strong> (or equivalent): entry + stop + take-profit</li>
   <li>LIVE state: <code>orb_v3_live_state.json</code> · PAPER state: <code>orb_v3_paper_state.json</code> (never mixed)</li>
-  <li>LIVE secrets: YOPC <code>live-secrets.json</code> · PAPER secrets: YOPC <code>paper-secrets.json</code> (never paste keys; paper never falls back to live)</li>
+  <li>Keys: stored on the trading computer and verified before every run; separate LIVE and PAPER keys (never pasted; paper never falls back to live)</li>
   <li><strong>LIVE + PAPER cash-only</strong>: max <strong>16%</strong> equity notional per symbol; max <strong>6</strong> concurrent (fits in cash). Cash gate holds entries cash cannot cover (<code>skip_insufficient_cash</code>). No margin.</li>
-  <li><strong>PAPER</strong> uses the same 6 / 16% sizing as LIVE; NDX-100 universe and paper secrets stay separate. Older larger PAPER lots stay until they exit.</li>
+  <li><strong>PAPER</strong> uses the same 6 / 16% sizing as LIVE; NDX-100 universe and paper secrets stay separate.</li>
   <li>Risk <strong>1.5%</strong> of equity per trade → shares ≈ <code>risk $ / R</code></li>
 </ul>
 
@@ -215,11 +215,20 @@ Stop = 118.00 (above entry)</div>
 <tbody>
 <tr><td>1</td><td>Stop hit</td><td>Close at OR midpoint → loss ≈ <strong>−1R</strong></td></tr>
 <tr><td>2</td><td>Target hit</td><td>Close at <strong>+2.5R</strong></td></tr>
-<tr><td>3</td><td>EOD flatten</td><td>Still open near close → flatten ~<strong>12:50 PT</strong></td></tr>
+<tr><td>3</td><td>EOD flatten</td><td>Still open near close → flatten at <strong>12:50 PT</strong> (LIVE) / <strong>12:55 PT</strong> (PAPER); <strong>12:58 PT</strong> backstop sweep</td></tr>
 <tr><td>4</td><td>Daily halt</td><td>Day P/L ≤ <strong>−2R</strong> → stop <em>new</em> trades that day</td></tr>
 </tbody>
 </table>
 <p>No overnight. No second trade on a symbol already traded that day.</p>
+
+<h2 id="exec">Execution / reliability</h2>
+<ul>
+  <li><strong>Trading computer first:</strong> all scans, EOD flattens and checks run on the bot's own computer; keys are verified with a read-only Alpaca call before every run.</li>
+  <li><strong>Key fallback:</strong> only if local keys are missing or rejected are fresh copies pulled from the owner's PC, with an alert naming the reason.</li>
+  <li><strong>Morning health check (7:37 PT):</strong> disk, code environment, keys and Alpaca access; problems alerted in one line.</li>
+  <li><strong>Heartbeat:</strong> each run publishes a status file alongside each dashboard; the owner's PC alerts if it goes quiet (&gt;35 min) or reports a problem.</li>
+  <li><strong>12:58 PT backstop flatten:</strong> run from the owner's PC directly through Alpaca if anything is still open at the close.</li>
+</ul>
 
 <h2 id="ops">Ops / monitoring</h2>
 <table>
