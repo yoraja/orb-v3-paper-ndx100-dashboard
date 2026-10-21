@@ -3,8 +3,8 @@
  "kind": "scan",
  "rc": 0,
  "keys": "ok",
- "or": "n/a(pre-7:30)",
- "ts_utc": "2026-10-21T14:29:37Z",
- "ts_pt": "2026-10-21 07:29 PT",
+ "or": "fresh",
+ "ts_utc": "2026-10-21T14:35:44Z",
+ "ts_pt": "2026-10-21 07:35 PT",
  "host": "trader-box"
 }
