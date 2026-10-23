@@ -1,10 +1,10 @@
 {
  "track": "paper",
- "kind": "scan",
+ "kind": "eod",
  "rc": 0,
  "keys": "ok",
  "or": "n/a",
- "ts_utc": "2026-10-23T19:50:02Z",
- "ts_pt": "2026-10-23 12:50 PT",
+ "ts_utc": "2026-10-23T19:56:12Z",
+ "ts_pt": "2026-10-23 12:56 PT",
  "host": "trader-box"
 }
